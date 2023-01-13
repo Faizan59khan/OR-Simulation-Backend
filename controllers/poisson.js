@@ -17,21 +17,6 @@ for (let i = 0; i < sheets.length; i++) {
 }
 
 function mm1ATnSTRate(arrivalTimes, serviceTimes) {
-  // Calculate the total number of customers arriving in the given time period
-  // const totalArrivals = arrivalTimes.length;
-
-  // // Calculate the total service time for all customers
-  // const totalServiceTime = serviceTimes.reduce((sum, t) => sum + t, 0);
-
-  // // Calculate the length of the time period
-  // const timePeriod = arrivalTimes[arrivalTimes.length - 1] - arrivalTimes[0];
-
-  // // Calculate arrival rate (lambda)
-  // const lambda = totalArrivals / timePeriod;
-
-  // // Calculate service rate (mu)
-  // const mu = totalServiceTime / timePeriod;
-
   const lambda = 1 / arrivalTimes;
   const mu = 1 / serviceTimes;
 
@@ -62,29 +47,9 @@ function factorial(n) {
   }
   return n * factorial(n - 1);
 }
-function mmcRates(arrivalTimes, max, min, serverCount) {
-  // Calculate the total number of customers arriving in the given time period
-  // const totalArrivals = arrivalTimes.length;
-
-  // // Calculate the total service time for all customers
-  // const totalServiceTime = serviceTimes.reduce((sum, t) => sum + t, 0);
-
-  // // Calculate the length of the time period
-  // const timePeriod = arrivalTimes[arrivalTimes.length - 1] - arrivalTimes[0];
-
-  // // Calculate arrival rate (lambda)
-  // const lambda = totalArrivals / timePeriod;
-
-  // // Calculate service rate (mu)
-  // const mu = totalServiceTime / timePeriod;
-
+function mmcRates(arrivalTimes, serviceTimes, serverCount) {
   const lambda = 1 / arrivalTimes;
-  const muLownUpp = (min + max) / 2;
-  const mu = 1 / muLownUpp;
-  const varianceSt = ((max - min) * (max - min)) / 12;
-  const varianceAt = 1 / Math.pow(lambda, 2);
-  const CA = varianceAt / varianceAt;
-  const CS = varianceSt / ((1 / mu) * (1 / mu));
+  const mu = 1 / serviceTimes;
   const CP = lambda / mu;
   const rho = lambda / (serverCount * mu);
   let rhoNot = 0;
@@ -98,23 +63,18 @@ function mmcRates(arrivalTimes, max, min, serverCount) {
   rhoNot = 1 / rhoNot;
 
   // Return the arrival and service rates as an object
-  return { lambda, mu, rho, rhoNot, CA, CS };
+  return { lambda, mu, rho, rhoNot };
 }
-function mmcMeasures(lambda, mu, rho1, rhoNot, CA, CS, serverCount) {
-  console.log(lambda, mu, rho1, rhoNot, CA, CS);
+function mmcMeasures(lambda, mu, rho1, rhoNot, serverCount) {
   let lqNominator = rhoNot * (lambda / mu) * (lambda / mu) * rho1;
   let lqDenominator = factorial(serverCount) * Math.pow(1 - rho1, 2);
-  console.log(lqNominator, lqDenominator);
   const Lq = lqNominator / lqDenominator;
   const Wq = Lq / lambda;
-  const WqGGC = (Wq * (CA + CS)) / 2;
-  const LqGGC = WqGGC * lambda;
-  const WGGC = WqGGC + 1 / mu;
   const W = lambda + 1 / mu;
   const L = lambda * W;
 
   // Return the performance measures as an object
-  return { L, Lq, Wq, WGGC, WqGGC, LqGGC, W };
+  return { L, Lq, Wq, W };
 }
 
 function mg1LamMuVar(arrivalTimes, max, min) {
@@ -140,46 +100,44 @@ function mg1Measures(lambda, mu, variance, rho) {
   return { L, Lq, Wq, W, idleServer };
 }
 
-function mgcExtras(arrivalTimes, serviceTimes) {
-  // Calculate the total number of customers arriving in the given time period
-  const totalArrivals = arrivalTimes.length;
+function mgcExtras(arrivalTimes, max, min, serverCount) {
+  const lambda = 1 / arrivalTimes;
+  const muLownUpp = (min + max) / 2;
+  const mu = 1 / muLownUpp;
+  const varianceSt = ((max - min) * (max - min)) / 12;
+  const varianceAt = 1 / Math.pow(lambda, 2);
+  const CA = varianceAt / varianceAt;
+  const CS = varianceSt / ((1 / mu) * (1 / mu));
+  const CP = lambda / mu;
+  const rho = lambda / (serverCount * mu);
+  let rhoNot = 0;
+  for (let i = 0; i <= serverCount; i++) {
+    if (i === serverCount) {
+      rhoNot += Math.pow(CP, i) / (factorial(i) * (1 - rho));
+    } else {
+      rhoNot += Math.pow(CP, i) / factorial(i);
+    }
+  }
+  rhoNot = 1 / rhoNot;
 
-  // Calculate the total service time for all customers
-  const totalServiceTime = serviceTimes.reduce((sum, t) => sum + t, 0);
-
-  // Calculate the length of the time period
-  const timePeriod = arrivalTimes[arrivalTimes.length - 1] - arrivalTimes[0];
-
-  // Calculate arrival rate (lambda)
-  const lambda = totalArrivals / timePeriod;
-
-  // Calculate mean of the service time distribution (mean)
-  const mean = totalServiceTime / totalArrivals;
-
-  // Calculate variance of the service time distribution (variance)
-  const variance =
-    serviceTimes.reduce((sum, t) => sum + (t - mean) ** 2, 0) /
-    serviceTimes.length;
-
-  return { lambda, mean, variance };
+  // Return the arrival and service rates as an object
+  return { lambda, mu, rho, rhoNot, CA, CS };
 }
-function mgcMeasures(lambda, mean, variance, serverCount) {
-  // Calculate average number of customers in the system (L)
-  const L = lambda * mean;
-
-  // Calculate average number of customers in the queue (Lq)
-  const Lq =
-    (lambda * lambda * variance) /
-    (2 * mean * (mean - lambda * (serverCount - 1)));
-
-  // Calculate average waiting time in the queue (Wq)
+function mgcMeasures(lambda, mu, rho1, rhoNot, CA, CS, serverCount) {
+  console.log(lambda, mu, rho1, rhoNot, CA, CS);
+  let lqNominator = rhoNot * (lambda / mu) * (lambda / mu) * rho1;
+  let lqDenominator = factorial(serverCount) * Math.pow(1 - rho1, 2);
+  console.log(lqNominator, lqDenominator);
+  const Lq = lqNominator / lqDenominator;
   const Wq = Lq / lambda;
-
-  // Calculate average time in the system (W)
-  const W = Wq + mean;
+  const WqGGC = (Wq * (CA + CS)) / 2;
+  const LqGGC = WqGGC * lambda;
+  const WGGC = WqGGC + 1 / mu;
+  const W = lambda + 1 / mu;
+  const L = lambda * W;
 
   // Return the performance measures as an object
-  return { L, Lq, Wq, W };
+  return { L, Lq, Wq, WGGC, WqGGC, LqGGC, W };
 }
 
 function gg1Extras(lambda, mu, variance, rho) {
@@ -291,18 +249,11 @@ const poissonDistributions = async (req, res, next) => {
   // serviceTimes.sort((a, b) => a - b);
   const { lambda, mu } = mm1ATnSTRate(arrivalTimes, serviceTimes);
   const {
-    lambda: l2,
-    mu: m2,
-    rho: rho1,
-    rhoNot,
-    CA,
-    CS,
-  } = mmcRates(
-    arrivalTimes,
-    Number(req?.query?.maxST),
-    Number(req?.query?.minST),
-    Number(req?.query?.server)
-  );
+    lambda: l6,
+    mu: m6,
+    rho: rho2,
+    rhoNot: rhoNot1,
+  } = mmcRates(arrivalTimes, serviceTimes, Number(req?.query?.server));
   const {
     lambda: l3,
     mu: m3,
@@ -313,11 +264,19 @@ const poissonDistributions = async (req, res, next) => {
     Number(req?.query?.maxST),
     Number(req?.query?.minST)
   );
-  // const {
-  //   lambda: l4,
-  //   mean: me2,
-  //   variance: v2,
-  // } = mgcExtras(arrivalTimes, serviceTimes);
+  const {
+    lambda: l2,
+    mu: m2,
+    rho: rho1,
+    rhoNot,
+    CA,
+    CS,
+  } = mgcExtras(
+    arrivalTimes,
+    Number(req?.query?.maxST),
+    Number(req?.query?.minST),
+    Number(req?.query?.server)
+  );
   // const {
   //   lambda: l5,
   //   meanArrival,
@@ -334,6 +293,14 @@ const poissonDistributions = async (req, res, next) => {
   // } = ggCExtras(arrivalTimes, serviceTimes);
   const MM1 = mm1Measures(lambda, mu);
   const MMC = mmcMeasures(
+    lambda,
+    mu,
+    rho2,
+    rhoNot1,
+    Number(req?.query?.server)
+  );
+  const MG1 = mg1Measures(l3, m3, variance, rho);
+  const MGC = mgcMeasures(
     l2,
     m2,
     rho1,
@@ -342,17 +309,15 @@ const poissonDistributions = async (req, res, next) => {
     CS,
     Number(req?.query?.server)
   );
-  const MG1 = mg1Measures(l3, m3, variance, rho);
-  // const MGC = mgcMeasures(l4, me2, v2, Number(req?.query?.server));
   const GG1 = gg1Measure(l3, m3, rho, CA, CS);
   // const GGC = ggcMeasures(l6, mA2, vA2, mS2, vS2, Number(req?.query?.server));
   res.json({
     MM1: { ...MM1 },
     MMC: { ...MMC },
     MG1: { ...MG1 },
-    MGC: { ...MMC },
+    MGC: { ...MGC },
     GG1: { ...GG1 },
-    GGC: { ...MMC },
+    GGC: { ...MGC },
   });
 };
 exports.poissonDistributions = poissonDistributions;
