@@ -5,6 +5,7 @@ const reader = require("xlsx");
 const file = reader.readFile("./File/queueAnalysis.xlsx");
 
 const Dist = require("probability-distributions");
+console.log("This is the main file")
 let data = [];
 
 const sheets = file.SheetNames;
